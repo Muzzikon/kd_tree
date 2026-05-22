@@ -6,11 +6,31 @@
 
 #include "kd_tree.h"
 
+static double get_coord(Point point, int axis) {
+    if (axis == 0) {
+        return point.x;
+    }
+
+    if (axis == 1) {
+        return point.y;
+    }
+
+    return point.z;
+}
+
 // Рекурсивная вставка точки в KD-дерево.
 // Ось сравнения зависит от глубины: x, y, z, затем снова x.
 Node* insert(Node* root, Point point, int index, int depth) {
+    int axis;
+
     if (root == NULL) {
         Node* new_node = (Node*)malloc(sizeof(Node));
+
+        if (new_node == NULL) {
+            fprintf(stderr, "Ошибка выделения памяти для узла KD-Tree\n");
+            exit(EXIT_FAILURE);
+        }
+
         new_node->point = point;
         new_node->index = index;
         new_node->left = new_node->right = NULL;
@@ -19,31 +39,13 @@ Node* insert(Node* root, Point point, int index, int depth) {
     }
 
     // На каждой глубине выбираем одну из трёх координат для разбиения пространства.
-    int cd = depth % 3;
+    axis = depth % 3;
 
-    if (cd == 0) {
-        if (point.x < root->point.x) {
-            root->left = insert(root->left, point, index, depth + 1);
-		}
-		else {
-            root->right = insert(root->right, point, index, depth + 1);
-        }
-    }
-	else if (cd == 1) {  // Если ось y
-        if (point.y < root->point.y) {
-            root->left = insert(root->left, point, index, depth + 1);
-        }
-		else {
-            root->right = insert(root->right, point, index, depth + 1);
-        }
+    if (get_coord(point, axis) < get_coord(root->point, axis)) {
+        root->left = insert(root->left, point, index, depth + 1);
     }
     else {
-        if (point.z < root->point.z) {
-            root->left = insert(root->left, point, index, depth + 1);
-        }
-        else {
-            root->right = insert(root->right, point, index, depth + 1);
-        }
+        root->right = insert(root->right, point, index, depth + 1);
     }
 
     return root;
@@ -66,6 +68,12 @@ static double distance_squared(Point a, Point b) {
     return dx * dx + dy * dy + dz * dz;
 }
 
+static int point_in_range(Point point, Point lower, Point upper) {
+    return point.x >= lower.x && point.x <= upper.x &&
+           point.y >= lower.y && point.y <= upper.y &&
+           point.z >= lower.z && point.z <= upper.z;
+}
+
 // Внутренняя рекурсивная функция поиска ближайшего соседа.
 // Сначала идём в более перспективную ветку, затем при необходимости проверяем вторую.
 static void nearest_neighbor_recursive(Node* root, Point target, int depth, Point* best_point, double* best_dist) {
@@ -82,9 +90,10 @@ static void nearest_neighbor_recursive(Node* root, Point target, int depth, Poin
     int axis = depth % 3;
     Node* first_branch;
     Node* second_branch;
+    double axis_dist = get_coord(target, axis) - get_coord(root->point, axis);
 
     // Определяем, какое поддерево просматривать первым по текущей оси.
-    if ((axis == 0 && target.x < root->point.x) || (axis == 1 && target.y < root->point.y) || (axis == 2 && target.z < root->point.z)) {
+    if (axis_dist < 0.0) {
         first_branch = root->left;
         second_branch = root->right;
     }
@@ -94,17 +103,6 @@ static void nearest_neighbor_recursive(Node* root, Point target, int depth, Poin
     }
 
     nearest_neighbor_recursive(first_branch, target, depth + 1, best_point, best_dist);
-
-    double axis_dist;
-    if (axis == 0) {
-        axis_dist = target.x - root->point.x;
-    } 
-    else if (axis == 1) {
-        axis_dist = target.y - root->point.y;
-    }
-    else {
-        axis_dist = target.z - root->point.z;
-    }
 
     // Проверяем вторую ветвь только если гиперплоскость может содержать более близкую точку.
     if (axis_dist * axis_dist < *best_dist) {
@@ -122,12 +120,6 @@ Point nearest_neighbor(Node* root, Point target, int depth) {
     // Рекурсивный поиск ближайшего соседа
     nearest_neighbor_recursive(root, target, depth, &best_point, &best_dist);
 
-    // Если точка не была найдена, возвращаем ошибку
-    if (best_point.x == DBL_MAX && best_point.y == DBL_MAX && best_point.z == DBL_MAX) {
-        printf("Не найден ближайший сосед для точки (%lf, %lf, %lf)\n", target.x, target.y, target.z);
-        best_point.x = best_point.y = best_point.z = -1.0;  // Можно вернуть ошибочное значение
-    }
-
     return best_point;
 }
 
@@ -138,19 +130,17 @@ void range_query(Node* root, Point lower, Point upper, int depth, Point* result,
     int cd = depth % 3;  // Чередуем оси
 
     // Проверяем, входит ли текущая точка в диапазон
-    if (root->point.x >= lower.x && root->point.x <= upper.x &&
-        root->point.y >= lower.y && root->point.y <= upper.y &&
-        root->point.z >= lower.z && root->point.z <= upper.z) {
-        result[*count] = root->point;
-        (*count)++;
+    if (point_in_range(root->point, lower, upper)) {
+    result[*count] = root->point;
+    (*count)++;
     }
 
     // Рекурсивно ищем в нужных поддеревьях
-    if ((cd == 0 && lower.x <= root->point.x) || (cd == 1 && lower.y <= root->point.y) || (cd == 2 && lower.z <= root->point.z)) {
+    if (get_coord(lower, cd) <= get_coord(root->point, cd)) {
         range_query(root->left, lower, upper, depth + 1, result, count);
     }
 
-    if ((cd == 0 && upper.x >= root->point.x) || (cd == 1 && upper.y >= root->point.y) || (cd == 2 && upper.z >= root->point.z)) {
+    if (get_coord(upper, cd) >= get_coord(root->point, cd)) {
         range_query(root->right, lower, upper, depth + 1, result, count);
     }
 }
@@ -161,22 +151,16 @@ void range_query_indices(Node* root, Point lower, Point upper, int depth, int* r
 
     int cd = depth % 3;
 
-    if (root->point.x >= lower.x && root->point.x <= upper.x &&
-        root->point.y >= lower.y && root->point.y <= upper.y &&
-        root->point.z >= lower.z && root->point.z <= upper.z) {
-        result[*count] = root->index;
-        (*count)++;
+    if (point_in_range(root->point, lower, upper)) {
+    result[*count] = root->index;
+    (*count)++;
     }
 
-    if ((cd == 0 && lower.x <= root->point.x) || 
-    (cd == 1 && lower.y <= root->point.y) || 
-    (cd == 2 && lower.z <= root->point.z)) {
+    if (get_coord(lower, cd) <= get_coord(root->point, cd)) {
         range_query_indices(root->left, lower, upper, depth + 1, result, count);
     }
 
-    if ((cd == 0 && upper.x >= root->point.x) || 
-    (cd == 1 && upper.y >= root->point.y) || 
-    (cd == 2 && upper.z >= root->point.z)) {
+    if (get_coord(upper, cd) >= get_coord(root->point, cd)) {
         range_query_indices(root->right, lower, upper, depth + 1, result, count);
     }
 
