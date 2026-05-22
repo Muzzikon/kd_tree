@@ -1,3 +1,5 @@
+.PHONY: all clean run-nearest run-range run-dbscan run-all benchmark visualize
+
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -Iinclude
 LDFLAGS = -lm
