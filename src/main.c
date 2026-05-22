@@ -66,9 +66,6 @@ int main(int argc, char *argv[]) {
         int rc = handle_kd_range(argv[1], root, &data, argc, argv);
         return finish_with_cleanup(root, &data, rc);
     }
-    else if (strcmp(argv[2], "-cmeans") == 0) {
-        printf("Операция Fuzzy C-means будет реализована позже.\n");
-    }
     // Режим кластеризации DBSCAN с выводом краткой статистики и времени работы.
     else if (strcmp(argv[2], "-dbscan") == 0) {
         int rc = handle_dbscan(argv[1], &data, argc, argv);
