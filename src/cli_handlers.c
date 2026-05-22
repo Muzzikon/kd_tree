@@ -22,30 +22,21 @@ static void print_nearest_result(const char *label, Point target, Point result) 
     }
 }
 
-static int same_point(Point a, Point b) {
-    return a.x == b.x && a.y == b.y && a.z == b.z;
-}
+static int same_point(Point a, Point b) { return a.x == b.x && a.y == b.y && a.z == b.z; }
 
 static int parse_positive_double(const char *text, double *value) {
     char *end;
-
     errno = 0;
     *value = strtod(text, &end);
-
     return text != end && *end == '\0' && errno != ERANGE && *value > 0.0;
 }
 
 static int parse_positive_int(const char *text, int *value) {
     char *end;
     long parsed;
-
     errno = 0;
     parsed = strtol(text, &end, 10);
-
-    if (text == end || *end != '\0' || errno == ERANGE || parsed <= 0 || parsed > INT_MAX) {
-        return 0;
-    }
-
+    if (text == end || *end != '\0' || errno == ERANGE || parsed <= 0 || parsed > INT_MAX) { return 0; }
     *value = (int)parsed;
     return 1;
 }
