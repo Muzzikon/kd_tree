@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <float.h>
 #include <time.h>
+#include <errno.h>
+#include <limits.h>
 
 #include "cli_handlers.h"
 #include "dbscan.h"
@@ -18,6 +20,34 @@ static void print_nearest_result(const char *label, Point target, Point result) 
     else {
         printf("%s: ближайший сосед к точке (%lf, %lf, %lf) — это точка (%lf, %lf, %lf)\n", label, target.x, target.y, target.z, result.x, result.y, result.z);
     }
+}
+
+static int same_point(Point a, Point b) {
+    return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+
+static int parse_positive_double(const char *text, double *value) {
+    char *end;
+
+    errno = 0;
+    *value = strtod(text, &end);
+
+    return text != end && *end == '\0' && errno != ERANGE && *value > 0.0;
+}
+
+static int parse_positive_int(const char *text, int *value) {
+    char *end;
+    long parsed;
+
+    errno = 0;
+    parsed = strtol(text, &end, 10);
+
+    if (text == end || *end != '\0' || errno == ERANGE || parsed <= 0 || parsed > INT_MAX) {
+        return 0;
+    }
+
+    *value = (int)parsed;
+    return 1;
 }
 
 // Обрабатывает вставку новой точки в массив и KD-дерево.
@@ -55,7 +85,7 @@ int handle_kd_insert(const char *input_filename, int argc, char *argv[], Node **
     output_filename = make_insert_output_filename(input_filename);
     if (output_filename == NULL) {
         printf("Не удалось сформировать имя выходного файла после вставки\n");
-        return 0;
+        return 1;
     }
 
     if (save_points_csv(output_filename, data->points, data->count)) {
@@ -104,6 +134,13 @@ int handle_kd_nearest(Node *root, PointArray *data, int argc, char *argv[]) {
     print_nearest_result("KD-Tree", target, nearest);
     print_nearest_result("Brute force", target, brute);
 
+    if (same_point(nearest, brute)) {
+        printf("Результаты KD-Tree и Brute force совпадают\n");
+    }
+    else {
+        printf("Результаты KD-Tree и Brute force различаются\n");
+    }
+
     printf("Время KD-Tree: %.6f сек.\n", kd_time);
     printf("Время Brute force: %.6f сек.\n", brute_time);
 
@@ -124,19 +161,17 @@ int handle_kd_range(const char *input_filename, Node *root, PointArray *data, in
     double brute_time;
     char *output_filename;
 
+    if (argc < 5) {
+        printf("Для -kd_range нужно передать диапазон, например: 1.0,2.0 4.0,5.0 или 1.0,2.0,3.0 4.0,5.0,6.0\n");
+        return 1;
+    }
+
     // Буферы для результатов KD-Tree и brute force.
     kd_result = malloc(data->count * sizeof(Point));
     brute_result = malloc(data->count * sizeof(Point));
 
     if (kd_result == NULL || brute_result == NULL) {
         printf("Не удалось выделить память для результатов диапазонного поиска\n");
-        free(kd_result);
-        free(brute_result);
-        return 1;
-    }
-
-    if (argc < 5) {
-        printf("Для -kd_range нужно передать диапазон, например: 1.0,2.0 4.0,5.0 или 1.0,2.0,3.0 4.0,5.0,6.0\n");
         free(kd_result);
         free(brute_result);
         return 1;
@@ -195,7 +230,7 @@ int handle_kd_range(const char *input_filename, Node *root, PointArray *data, in
         printf("Не удалось сформировать имя выходного файла для диапазонного поиска\n");
         free(kd_result);
         free(brute_result);
-        return 0;
+        return 1;
     }
 
     if (save_points_csv(output_filename, kd_result, kd_count)) {
@@ -225,11 +260,13 @@ int handle_dbscan(const char *input_filename, PointArray *data, int argc, char *
         return 1;
     }
 
-    eps = atof(argv[3]);
-    min_pts = atoi(argv[4]);
+    if (!parse_positive_double(argv[3], &eps)) {
+        printf("Неверный параметр eps: нужно положительное число\n");
+        return 1;
+    }
 
-    if (eps <= 0.0 || min_pts <= 0) {
-        printf("Неверные параметры DBSCAN: eps > 0, min_pts > 0\n");
+    if (!parse_positive_int(argv[4], &min_pts)) {
+        printf("Неверный параметр min_pts: нужно положительное целое число\n");
         return 1;
     }
 

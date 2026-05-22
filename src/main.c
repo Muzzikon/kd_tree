@@ -39,9 +39,9 @@ int main(int argc, char *argv[]) {
 
     // Сначала загружаем все точки в память, затем по ним строим KD-дерево.
     PointArray data = load_points_array_from_csv(argv[1]);
-    if (data.count < 0) {
+    if (data.count <= 0) {
         printf("Не удалось загрузить точки из CSV-файла: %s\n", argv[1]);
-        printf("Проверьте, что файл существует по указанному пути или находится в папке Tests/\n");
+        printf("Проверьте, что файл существует, находится в папке Tests/ или содержит точки формата x,y,z\n");
         return 1;
     }
 
