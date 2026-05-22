@@ -29,7 +29,15 @@ run-nearest: $(TARGET)
 	./$(TARGET) Tests/Circle_clean_xyz.csv -kd_nearest 5,0,0
 
 run-range: $(TARGET)
-	./$(TARGET) Tests/Circle_clean_xyz.csv -kd_range 0,0,0 3
+	./$(TARGET) Tests/Circle_clean_xyz.csv -kd_range 4.5,-0.8,-0.2 5.5,0.8,0.2
 
 run-dbscan: $(TARGET)
 	./$(TARGET) Tests/Two_clusters_noise_xyz.csv -dbscan 1.5 3
+
+run-all: run-nearest run-range run-dbscan
+
+benchmark: $(TARGET)
+	./$(TARGET) Tests/Circle_clean_xyz.csv -kd_nearest 5,0,0
+	./$(TARGET) Tests/Sphere_xyz.csv -kd_nearest 3,3,3
+	./$(TARGET) Tests/Circle_clean_xyz.csv -kd_range 4.5,-0.8,-0.2 5.5,0.8,0.2
+	./$(TARGET) Tests/Sphere_xyz.csv -kd_range 2,2,2 4,4,4
