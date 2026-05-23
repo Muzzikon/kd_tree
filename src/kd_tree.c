@@ -1,6 +1,5 @@
 // Реализация 3D KD-дерева.
 // Здесь находятся вставка точек, поиск ближайшего соседа, диапазонный поиск и очистка памяти.
-#include <stdio.h>
 #include <stdlib.h>
 #include <float.h>
 
@@ -49,14 +48,6 @@ Node* insert(Node* root, Point point, int index, int depth) {
     }
 
     return root;
-}
-
-// Простой вывод всех точек дерева в глубинном обходе.
-void print_tree(Node* root) {
-    if (root == NULL) return;
-    printf("Point: (%lf, %lf, %lf)\n", root->point.x, root->point.y, root->point.z);
-    print_tree(root->left);
-    print_tree(root->right);
 }
 
 // Квадрат расстояния между двумя точками.
@@ -131,8 +122,8 @@ void range_query(Node* root, Point lower, Point upper, int depth, Point* result,
 
     // Проверяем, входит ли текущая точка в диапазон
     if (point_in_range(root->point, lower, upper)) {
-    result[*count] = root->point;
-    (*count)++;
+        result[*count] = root->point;
+        (*count)++;
     }
 
     // Рекурсивно ищем в нужных поддеревьях
@@ -143,27 +134,6 @@ void range_query(Node* root, Point lower, Point upper, int depth, Point* result,
     if (get_coord(upper, cd) >= get_coord(root->point, cd)) {
         range_query(root->right, lower, upper, depth + 1, result, count);
     }
-}
-
-// Диапазонный поиск, который возвращает индексы точек вместо самих координат.
-void range_query_indices(Node* root, Point lower, Point upper, int depth, int* result, int* count) {
-    if (root == NULL) return;
-
-    int cd = depth % 3;
-
-    if (point_in_range(root->point, lower, upper)) {
-    result[*count] = root->index;
-    (*count)++;
-    }
-
-    if (get_coord(lower, cd) <= get_coord(root->point, cd)) {
-        range_query_indices(root->left, lower, upper, depth + 1, result, count);
-    }
-
-    if (get_coord(upper, cd) >= get_coord(root->point, cd)) {
-        range_query_indices(root->right, lower, upper, depth + 1, result, count);
-    }
-
 }
 
 // Полное освобождение памяти KD-дерева.
