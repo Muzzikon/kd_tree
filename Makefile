@@ -1,4 +1,4 @@
-.PHONY: all clean run-nearest run-range run-dbscan run-all benchmark visualize check check-lines
+.PHONY: all clean run-nearest run-range run-dbscan run-all benchmark dbscan-examples visualize check check-lines
 
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -Iinclude
