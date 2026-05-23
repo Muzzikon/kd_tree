@@ -17,8 +17,6 @@
 - кластеризация `DBSCAN`;
 - сохранение результатов в отдельные CSV-файлы.
 
-На текущем этапе режим `-cmeans` распознаётся в CLI, но алгоритм **ещё не реализован**.
-
 ---
 
 ## Что уже реализовано
@@ -37,7 +35,7 @@
 - `DBSCAN` для 3D-точек;
 - ускорение `DBSCAN` через **пространственную сетку (`grid index`)**;
 - сохранение результатов `range query`, `DBSCAN` и вставки в отдельные CSV-файлы;
-- 2D-визуализация результата `DBSCAN` через Python-скрипт.
+- 2D-визуализация исходных точек, ближайшего соседа, диапазонного поиска и результата `DBSCAN` через Python-скрипты.
 
 ---
 
@@ -67,11 +65,11 @@ C_Project_Muz/
 │   └── plot_range_2D.py
 ├── Tests/
 │   ├── Circle_xyz.csv
-│   ├── Random1_xyz.csv
-│   ├── Random2_xyz.csv
-│   ├── Still_xyz.csv
-│   ├── Zigzag_xyz.csv
-│   └── дополнительные исходные *_cloud.csv
+│   ├── Circle_clean_xyz.csv
+│   ├── Sphere_xyz.csv
+│   ├── Spiral_xyz.csv
+│   ├── Two_clusters_noise_xyz.csv
+│   └── Room_sample_xyz.csv
 ├── README.md
 └── .gitignore
 ```
@@ -160,16 +158,22 @@ C_Project_Muz/
 
 ## Сборка проекта
 
-Для сборки используется `gcc`.
+Для сборки используется `Makefile`.
 
 ```bash
-gcc -Wall -Wextra -Werror -std=c11 src/main.c src/kd_tree.c src/dbscan.c src/grid_index.c src/io_utils.c src/bruteforce_utils.c src/cli_handlers.c -Iinclude -lm -o robot_spatial
+make
 ```
 
 После успешной сборки появится исполняемый файл:
 
 ```bash
 ./robot_spatial
+```
+
+Для очистки объектных файлов и исполняемого файла используется команда:
+
+```bash
+make clean
 ```
 
 ---
@@ -194,6 +198,13 @@ x,y,z
 
 Если исходный CSV содержит дополнительные столбцы, его нужно предварительно преобразовать к формату `x,y,z`.
 
+В проекте используются два типа тестовых данных:
+
+- реальные или подготовленные облака точек;
+- синтетические тестовые наборы, созданные для наглядной проверки отдельных случаев.
+
+Синтетические файлы не заменяют реальные данные, а используются как контролируемые примеры: круг, сфера, кластеры с шумом и спираль.
+
 ---
 
 ## Поддерживаемые режимы
@@ -210,7 +221,7 @@ x,y,z
 Пример:
 
 ```bash
-./robot_spatial Tests/Still_xyz.csv -kd_insert 1234.5,2345.5,3456.5
+./robot_spatial Tests/Circle_clean_xyz.csv -kd_insert 1234.5,2345.5,3456.5
 ```
 
 Что делает:
@@ -222,9 +233,9 @@ x,y,z
 Примеры имён выходных файлов:
 
 ```text
-Results/CSV/Still_xyz_inserted.csv
-Results/CSV/Circle_xyz_inserted.csv
-Results/CSV/Random1_xyz_inserted.csv
+Results/CSV/Circle_clean_xyz_inserted.csv
+Results/CSV/Sphere_xyz_inserted.csv
+Results/CSV/Two_clusters_noise_xyz_inserted.csv
 ```
 
 Каталог `Results/CSV` создаётся автоматически при первом сохранении.
@@ -241,7 +252,7 @@ Results/CSV/Random1_xyz_inserted.csv
 Пример:
 
 ```bash
-./robot_spatial Tests/Random1_xyz.csv -kd_nearest 0,0,0
+./robot_spatial Tests/Sphere_xyz.csv -kd_nearest 5,0,0
 ```
 
 Что делает:
@@ -261,7 +272,7 @@ Results/CSV/Random1_xyz_inserted.csv
 Пример:
 
 ```bash
-./robot_spatial Tests/Zigzag_xyz.csv -kd_range -5,-5,-5 5,5,5
+./robot_spatial Tests/Circle_clean_xyz.csv -kd_range 4.5,-0.8,-0.2 5.5,0.8,0.2
 ```
 
 Что делает:
@@ -274,9 +285,9 @@ Results/CSV/Random1_xyz_inserted.csv
 Примеры имён выходных файлов:
 
 ```text
-Results/CSV/Still_xyz_range.csv
-Results/CSV/Circle_xyz_range.csv
-Results/CSV/Random1_xyz_range.csv
+Results/CSV/Circle_clean_xyz_range.csv
+Results/CSV/Sphere_xyz_range.csv
+Results/CSV/Two_clusters_noise_xyz_range.csv
 ```
 
 Если файл уже существует, создаётся новый с нумерацией.
@@ -292,7 +303,7 @@ Results/CSV/Random1_xyz_range.csv
 Пример:
 
 ```bash
-./robot_spatial Tests/Random2_xyz.csv -dbscan 0.5 5
+./robot_spatial Tests/Two_clusters_noise_xyz.csv -dbscan 0.8 5
 ```
 
 Что делает:
@@ -312,45 +323,97 @@ x,y,z,cluster
 Примеры имён выходных файлов:
 
 ```text
-Results/CSV/Still_xyz_dbscan.csv
-Results/CSV/Random2_xyz_dbscan.csv
-Results/CSV/Circle_xyz_dbscan.csv
+Results/CSV/Two_clusters_noise_xyz_dbscan.csv
+Results/CSV/Sphere_xyz_dbscan.csv
+Results/CSV/Spiral_xyz_dbscan.csv
 ```
 
 Если такой файл уже существует, создаётся новый с нумерацией.
 
 ---
 
-### 5. Fuzzy C-means
+## Команды Makefile
+
+В проекте добавлены команды для сборки, запуска проверок и генерации визуализаций.
+
+### Основная сборка
 
 ```bash
-./robot_spatial <file.csv> -cmeans ...
+make
 ```
 
-На текущем этапе алгоритм **не реализован**.
+### Очистка проекта
 
-Режим распознаётся, но выводит сообщение о том, что реализация будет добавлена позже.
+```bash
+make clean
+```
+
+### Запуск основных режимов
+
+```bash
+make run-all
+```
+
+Команда запускает:
+
+- поиск ближайшего соседа;
+- диапазонный поиск;
+- DBSCAN-кластеризацию.
+
+### Сравнительные проверки
+
+```bash
+make benchmark
+```
+
+Команда запускает несколько проверок `KD-Tree` против `Brute force` для:
+
+- nearest neighbor;
+- range query.
+
+Для каждого запуска программа выводит время работы и проверяет совпадение результатов.
+
+### Генерация 2D-визуализаций
+
+```bash
+make visualize
+```
+
+Команда создаёт папку `Results/` и генерирует PNG-файлы с визуализациями.
+
+### Полная проверка проекта
+
+```bash
+make check
+```
+
+Команда выполняет:
+
+- очистку проекта;
+- сборку;
+- запуск основных режимов;
+- сравнительные проверки;
+- генерацию визуализаций;
+- проверку ограничения 300 строк для файлов `src/*.c` и `include/*.h`.
 
 ---
 
 ## Проверенные сценарии
 
 Основные тестовые CSV для проверки сценариев находятся в папке `Tests/`.
-Часть более крупных или вспомогательных файлов может использоваться только локально.
 
 - `Tests/Circle_xyz.csv`
-- `Tests/Random1_xyz.csv`
-- `Tests/Random2_xyz.csv`
-- `Tests/Still_xyz.csv`
-- `Tests/Zigzag_xyz.csv`
+- `Tests/Circle_clean_xyz.csv`
+- `Tests/Sphere_xyz.csv`
+- `Tests/Spiral_xyz.csv`
+- `Tests/Two_clusters_noise_xyz.csv`
+- `Tests/Room_sample_xyz.csv`
 
 Для этих файлов были проверены режимы:
 - `-kd_nearest`
 - `-kd_range`
 - `-dbscan`
 - `-kd_insert`
-
-Тестовые CSV использовались локально при проверке и не обязательно входят в состав самого репозитория.
 
 Программа принимает либо полный путь к CSV-файлу, либо короткое имя файла.
 Если передано только имя без пути, программа сначала ищет файл по указанному имени,
@@ -363,78 +426,53 @@ Results/CSV/Circle_xyz_dbscan.csv
 
 Для каждого из пяти файлов в качестве точки-запроса использовалась первая точка из файла.
 
-Во всех случаях:
-- `KD-Tree` и `Brute force` вернули одну и ту же точку;
-- программа отработала корректно;
-- `KD-Tree` оказался быстрее `Brute force`.
+```bash
+./robot_spatial Tests/Circle_clean_xyz.csv -kd_nearest 5,0,0
+./robot_spatial Tests/Sphere_xyz.csv -kd_nearest 5,0,0
+./robot_spatial Tests/Two_clusters_noise_xyz.csv -kd_nearest -3,0,0
+./robot_spatial Tests/Spiral_xyz.csv -kd_nearest 0.2,0,0
+./robot_spatial Tests/Room_sample_xyz.csv -kd_nearest 1.17,1.02,0.96
+```
 
-Это подтверждает корректность поиска ближайшего соседа.
+Во всех случаях программа выводит результат `KD-Tree`, результат `Brute force`, сравнение корректности и время работы обоих способов.
 
 ### `KD-Tree`: range query
 
-Для каждого из пяти файлов использовался диапазон вида:
+Для проверки диапазонного поиска используются следующие команды:
 
-```text
-[q] ... [q]
+```bash
+./robot_spatial Tests/Circle_clean_xyz.csv -kd_range 4.5,-0.8,-0.2 5.5,0.8,0.2
+./robot_spatial Tests/Sphere_xyz.csv -kd_range -2,-2,-5.5 2,2,5.5
+./robot_spatial Tests/Two_clusters_noise_xyz.csv -kd_range -4.5,-1.5,-1.5 -1.5,1.5,1.5
+./robot_spatial Tests/Spiral_xyz.csv -kd_range -1.5,-1.5,-0.2 1.5,1.5,1.2
+./robot_spatial Tests/Room_sample_xyz.csv -kd_range 1.1,0.8,0.9 2.0,1.2,1.3
 ```
 
-где `q` — первая точка из файла.
-
-Полученные результаты:
-
-| Файл | Найдено точек |
-|------|--------------:|
-| Circle_xyz.csv | 1 |
-| Random1_xyz.csv | 3 |
-| Random2_xyz.csv | 6 |
-| Still_xyz.csv | 86 |
-| Zigzag_xyz.csv | 1 |
-
-Во всех случаях:
-- количество точек у `KD-Tree` и `Brute force` совпало;
-- после сортировки результаты совпали полностью;
-- результат диапазонного поиска был сохранён в отдельный CSV-файл.
-
-Это подтверждает корректность `range query`, включая случаи с дубликатами точек.
+Для каждого запуска программа сравнивает результат `KD-Tree` с `Brute force` и сохраняет найденные точки в `Results/CSV`.
 
 ### `DBSCAN`
 
-Для всех пяти файлов использовались параметры:
+Для проверки кластеризации используются следующие команды:
 
-```text
-eps = 0.5
-min_pts = 5
+```bash
+./robot_spatial Tests/Circle_clean_xyz.csv -dbscan 0.15 4
+./robot_spatial Tests/Sphere_xyz.csv -dbscan 0.55 5
+./robot_spatial Tests/Two_clusters_noise_xyz.csv -dbscan 0.7 8
+./robot_spatial Tests/Spiral_xyz.csv -dbscan 0.28 5
+./robot_spatial Tests/Room_sample_xyz.csv -dbscan 0.05 8
 ```
 
-Полученные результаты:
-
-| Файл | Точек | Кластеров | Шумовых точек | Время |
-|------|------:|----------:|--------------:|------:|
-| Circle_xyz.csv | 38341 | 9 | 88 | 1.627666 сек |
-| Random1_xyz.csv | 105107 | 6 | 76 | 25.145795 сек |
-| Random2_xyz.csv | 65366 | 9 | 70 | 8.518997 сек |
-| Still_xyz.csv | 2082 | 4 | 25 | 0.009583 сек |
-| Zigzag_xyz.csv | 80312 | 10 | 58 | 11.177204 сек |
-
-Во всех случаях:
-- алгоритм завершился без ошибок;
-- результат был сохранён в CSV формата `x,y,z,cluster`.
+Проверяются простые формы, 3D-сфера, два кластера с шумом, сложная вытянутая форма и более тяжёлое облако точек.
 
 ### `KD-Tree`: insert
 
-Для проверки вставки использовалась точка:
+Для проверки вставки использовалась команда:
 
-```text
-1234.5,2345.5,3456.5
+```bash
+./robot_spatial Tests/Circle_xyz.csv -kd_insert 1234.5,2345.5,3456.5
 ```
 
-Для всех пяти файлов:
-- число точек после вставки увеличилось ровно на 1;
-- был создан отдельный `*_inserted.csv`;
-- повторный запуск `-kd_nearest` на новом файле возвращал именно вставленную точку;
-- `KD-Tree` и `Brute force` снова совпадали полностью.
-
-Это подтверждает корректность вставки в массив точек и `KD-Tree`.
+После вставки количество точек увеличивается на 1, а обновлённый набор сохраняется в отдельный CSV-файл.
 
 ---
 
@@ -445,49 +483,49 @@ min_pts = 5
 ### 1. Исходные точки
 
 ```bash
-python3 scripts/plot_points_2D.py Tests/Still_xyz.csv
+python3 scripts/plot_points_2D.py Tests/Circle_clean_xyz.csv
 ```
 
 Пример результата:
 
 ```bash
-Results/PNG/Still_xyz_points_2D.png
+Results/PNG/Circle_clean_xyz_points_2D.png
 ```
 
 ### 2. Ближайший сосед
 
 ```bash
-python3 scripts/plot_nearest_2D.py Tests/Still_xyz.csv 0,0,0
+python3 scripts/plot_nearest_2D.py Tests/Sphere_xyz.csv 5,0,0
 ```
 
 Пример результата:
 
 ```bash
-Results/PNG/Still_xyz_nearest_2D.png
+Results/PNG/Sphere_xyz_nearest_2D.png
 ```
 
 ### 3. Range query
 
 ```bash
-python3 scripts/plot_range_2D.py Tests/Still_xyz.csv Results/CSV/Still_xyz_range.csv
+python3 scripts/plot_range_2D.py Tests/Circle_clean_xyz.csv Results/CSV/Circle_clean_xyz_range.csv
 ```
 
 Пример результата:
 
 ```bash
-Results/PNG/Still_xyz_range_2D.png
+Results/PNG/Circle_clean_xyz_range_2D.png
 ```
 
 ### 4. DBSCAN
 
 ```bash
-python3 scripts/plot_dbscan_2D.py Results/CSV/Still_xyz_dbscan.csv
+python3 scripts/plot_dbscan_2D.py Results/CSV/Two_clusters_noise_xyz_dbscan.csv
 ```
 
 Пример результата:
 
 ```bash
-Results/PNG/Still_xyz_dbscan_2D.png
+Results/PNG/Two_clusters_noise_xyz_dbscan_2D.png
 ```
 
 Каталог Results/PNG создаётся автоматически.
@@ -507,9 +545,8 @@ pip install matplotlib
 
 1. Основной входной формат — CSV вида `x,y,z`.
 2. CSV с дополнительными столбцами нужно предварительно преобразовать.
-3. `Fuzzy C-means` пока не реализован.
-4. В репозитории могут отсутствовать крупные тестовые CSV-файлы, если они используются только локально.
-5. На больших наборах данных `DBSCAN` работает заметно дольше, чем операции `nearest` и `range`.
+3. Крупные внешние облака точек могут отсутствовать в репозитории, если они используются только локально.
+4. На больших наборах данных `DBSCAN` работает заметно дольше, чем операции `nearest` и `range`.
 
 ---
 
@@ -520,41 +557,36 @@ pip install matplotlib
 - вставка в `KD-Tree`;
 - поиск ближайшего соседа;
 - диапазонный поиск;
-- сравнение `KD-Tree` и `Brute force` по корректности;
+- сравнение `KD-Tree` и `Brute force` по корректности для `nearest neighbor`;
+- сравнение `KD-Tree` и `Brute force` по корректности для `range search`;
 - сравнение `KD-Tree` и `Brute force` по времени;
-- `DBSCAN`;
+- пространственные запросы для `DBSCAN`;
 - сохранение результатов в CSV;
-- 2D-визуализации исходных точек, результата nearest neighbor, range query, кластеров `DBSCAN` и шумовых точек.
+- 2D-визуализации исходных точек, результатов запросов, кластеров и шумовых точек.
 
 ---
 
-## Что ещё можно улучшить
+## Пример полной проверки
 
-В будущем в проект можно добавить:
-- автоматический запуск визуализаций после выполнения CLI-команд;
-- `Makefile` для сборки проекта одной командой;
-- отдельный режим удаления точки из KD-Tree;
-- более подробный отчёт по производительности на нескольких наборах данных;
-- завершение реализации Fuzzy C-means.
----
-
-## Примеры полного запуска
+Для проверки требований к проекту можно выполнить одну команду
 
 ```bash
-gcc -Wall -Wextra -Werror -std=c11 src/main.c src/kd_tree.c src/dbscan.c src/grid_index.c src/io_utils.c src/bruteforce_utils.c src/cli_handlers.c -Iinclude -lm -o robot_spatial
-
-./robot_spatial Tests/Still_xyz.csv -dbscan 0.5 5
-python3 scripts/plot_dbscan_2D.py Results/CSV/Still_xyz_dbscan.csv
-
-./robot_spatial Tests/Still_xyz.csv -kd_range -5,-5,-5 5,5,5
-python3 scripts/plot_range_2D.py Tests/Still_xyz.csv Results/CSV/Still_xyz_range.csv
-
-python3 scripts/plot_points_2D.py Tests/Still_xyz.csv
-python3 scripts/plot_nearest_2D.py Tests/Still_xyz.csv 0,0,0
+make check
 ```
+
+Эта команда выполняет:
+
+- очистку проекта;
+- сборку;
+- запуск основных режимов;
+- сравнительные проверки KD-Tree и Brute force;
+- генерацию 2D-визуализаций;
+- проверку ограничения 300 строк для файлов `src/*.c` и `include/*.h`.
+
+Если команда завершилась без ошибок, все требования выполнены
 
 ---
 
 ## Автор
 
-Проект выполнен в рамках учебной работы по курсу **«Императивное программирование»**.
+Степанов Илья Николаевич
