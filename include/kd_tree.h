@@ -24,15 +24,11 @@ typedef struct Node {
 
 // Функции построения и обхода KD-дерева.
 Node* insert(Node* root, Point point, int index, int depth);
-// Вывод дерева в глубинном обходе.
-void print_tree(Node* root);
 // Поиск ближайшего соседа в 3D KD-дереве.
 Point nearest_neighbor(Node* root, Point target, int depth);
 
 // Поиск точек внутри 3D-диапазона.
 void range_query(Node* root, Point lower, Point upper, int depth, Point* result, int* count);
-// Диапазонный поиск, возвращающий индексы точек.
-void range_query_indices(Node* root, Point lower, Point upper, int depth, int* result, int* count);
 
 void free_tree(Node* root);
 
