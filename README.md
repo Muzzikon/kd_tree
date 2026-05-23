@@ -97,7 +97,6 @@ C_Project_Muz/
 - `insert`
 - `nearest_neighbor`
 - `range_query`
-- `range_query_indices`
 - `free_tree`
 
 Узел дерева хранит:
