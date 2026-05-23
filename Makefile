@@ -1,4 +1,4 @@
-.PHONY: all clean run-nearest run-range run-dbscan run-all benchmark visualize
+.PHONY: all clean run-nearest run-range run-dbscan run-all benchmark visualize check check-lines
 
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -Iinclude
@@ -57,3 +57,22 @@ visualize: $(TARGET)
 	python3 scripts/plot_nearest_2D.py Tests/Circle_clean_xyz.csv 5,0,0
 	python3 scripts/plot_range_2D.py Tests/Circle_clean_xyz.csv Results/CSV/Circle_clean_xyz_range.csv
 	python3 scripts/plot_dbscan_2D.py Results/CSV/Two_clusters_noise_xyz_dbscan.csv
+
+check: 
+	$(MAKE) clean
+	$(MAKE) all
+	$(MAKE) run-all
+	$(MAKE) benchmark
+	$(MAKE) visualize
+	$(MAKE) check-lines
+
+check-lines:
+	@echo "Проверка ограничения 300 строк..."
+	@for file in src/*.c include/*.h; do \
+		lines=$$(wc -l < $$file); \
+		if [ $$lines -gt 300 ]; then \
+			echo "Ошибка: $$file содержит $$lines строк"; \
+			exit 1; \
+		fi; \
+	done
+	@echo "Все файлы src/*.c и include/*.h не превышают 300 строк"
